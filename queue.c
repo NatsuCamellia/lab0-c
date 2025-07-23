@@ -78,9 +78,7 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
         return NULL;
 
     struct list_head *node = head->next;
-    node->prev->next = node->next;
-    node->next->prev = node->prev;
-    INIT_LIST_HEAD(node);
+    list_del_init(node);
 
     element_t *e = list_entry(node, element_t, list);
     if (sp)
@@ -95,9 +93,7 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
         return NULL;
 
     struct list_head *node = head->prev;
-    node->prev->next = node->next;
-    node->next->prev = node->prev;
-    INIT_LIST_HEAD(node);
+    list_del_init(node);
 
     list_del_init(node);
     element_t *e = list_entry(node, element_t, list);
