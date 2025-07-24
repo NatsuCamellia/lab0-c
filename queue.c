@@ -164,7 +164,29 @@ bool q_delete_mid(struct list_head *head)
 /* Delete all nodes that have duplicate string */
 bool q_delete_dup(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    if (!head || list_empty(head))
+        return false;
+
+    element_t *curr = list_entry(head->next, element_t, list), *next;
+    while (&curr->list != head) {
+        bool duplicated = false;
+        next = list_entry(curr->list.next, element_t, list);
+        while (&next->list != head && strcmp(curr->value, next->value) == 0) {
+            duplicated = true;
+            list_del(&next->list);
+            free(next->value);
+            free(next);
+            next = list_entry(curr->list.next, element_t, list);
+        }
+
+        if (duplicated) {
+            list_del(&curr->list);
+            free(curr->value);
+            free(curr);
+        }
+
+        curr = next;
+    }
     return true;
 }
 
@@ -208,10 +230,38 @@ void q_reverse(struct list_head *head)
     head->prev = next;
 }
 
+/* Reverse a doubly linked list starting with head with length k.
+ * Also modify the node outside of the reversed list */
+static void list_reverseK(struct list_head *head, int k)
+{
+    /* prev, head, next */
+    struct list_head *prev = head->prev, *next = head->next, *tail = head,
+                     *node;
+    while (k > 1) {
+        node = next;
+        next = next->next;
+        node->next = head;
+        head->prev = node;
+        head = node;
+        k--;
+    }
+    head->prev = prev;
+    prev->next = head;
+    tail->next = next;
+    next->prev = tail;
+}
+
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
-    // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    if (!head || list_empty(head))
+        return;
+
+    int len = q_size(head);
+    struct list_head *node;
+    for (node = head->next; len >= k; node = node->next, len -= k) {
+        list_reverseK(node, k);
+    }
 }
 
 /* Sort a headless singly linked list with length k */
@@ -269,8 +319,27 @@ int q_ascend(struct list_head *head)
  * the right side of it */
 int q_descend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return q_size(head);
+
+    /* Iterate all nodes backwards. Let prev and next adjacent nodes.
+     * If prev < next then remove prev */
+    struct list_head *curr = head->prev->prev, *safe;
+    while (curr != head) {
+        /* safe <- curr <- next */
+        safe = curr->prev;
+        const element_t *curr_e = list_entry(curr, element_t, list);
+        const element_t *next_e = list_entry(curr->next, element_t, list);
+        if (strcmp(curr_e->value, next_e->value) < 0) {
+            list_del_init(curr);
+            /* Delete is needed to pass the test */
+            free(curr_e->value);
+            free(curr_e);
+        }
+        curr = safe;
+    }
+
+    return q_size(head);
 }
 
 /* Merge two queues given their queue contexts */
