@@ -4,28 +4,27 @@
 
 #include "queue.h"
 
-/* Merge two headless singly linked lists */
-static struct list_head *list_merge(struct list_head *a,
-                                    struct list_head *b,
-                                    bool descend)
+/* Merge two queues */
+static void q_merge2(struct list_head *a, struct list_head *b, bool descend)
 {
-    struct list_head *head = NULL, **tail = &head;
-    int toggle = descend ? -1 : 1;
-    while (a && b) {
-        const char *str_a = list_entry(a, element_t, list)->value;
-        const char *str_b = list_entry(b, element_t, list)->value;
-        if (toggle * strcmp(str_a, str_b) <= 0) {
-            *tail = a;
-            tail = &a->next;
-            a = a->next;
-        } else {
-            *tail = b;
-            tail = &b->next;
-            b = b->next;
-        }
+    struct list_head head, *node;
+    INIT_LIST_HEAD(&head);
+    int flip = descend ? -1 : 1;
+    while (!list_empty(a) && !list_empty(b)) {
+        if (flip * strcmp(list_first_entry(a, element_t, list)->value,
+                          list_first_entry(b, element_t, list)->value) <=
+            0)
+            node = &q_remove_head(a, NULL, 0)->list;
+        else
+            node = &q_remove_head(b, NULL, 0)->list;
+        list_add_tail(node, &head);
     }
-    *tail = a ? a : b;
-    return head;
+    if (!list_empty(a))
+        list_splice_tail_init(a, &head);
+    else if (!list_empty(b))
+        list_splice_tail_init(b, &head);
+
+    list_splice(&head, a);
 }
 
 /* Create an empty queue */
@@ -268,22 +267,25 @@ void q_reverseK(struct list_head *head, int k)
     }
 }
 
-/* Sort a headless singly linked list with length k */
-static struct list_head *list_sortK(struct list_head *head, bool descend, int k)
+/* Sort a queue with length k */
+static void q_sortK(struct list_head *head, bool descend, int k)
 {
-    if (k == 1)
-        return head;
+    if (!head || k <= 1)
+        return;
+
+    struct list_head left;
+    INIT_LIST_HEAD(&left);
 
     int half = k / 2;
-    struct list_head *tail = head, *left = head, *right;
-    for (int i = 0; i < half - 1; i++)
-        tail = tail->next;
-    right = tail->next;
-    tail->next = NULL;
+    struct list_head *cut = head;
+    for (int i = 0; i < half; i++)
+        cut = cut->next;
+    list_cut_position(&left, head, cut);
 
-    left = list_sortK(left, descend, half);
-    right = list_sortK(right, descend, k - half);
-    return list_merge(left, right, descend);
+    q_sortK(&left, descend, half);
+    q_sortK(head, descend, k - half);
+    q_merge2(&left, head, descend); /* For stable sort */
+    list_splice_init(&left, head);
 }
 
 /* Sort elements of queue in ascending/descending order */
@@ -292,23 +294,7 @@ void q_sort(struct list_head *head, bool descend)
     if (!head)
         return;
 
-    int len = 0;
-    struct list_head *node;
-    list_for_each(node, head)
-        len++;
-    if (len <= 1)
-        return;
-
-    head->prev->next = NULL;
-    node = list_sortK(head->next, descend, len);
-    head->next = node;
-    node->prev = head;
-    while (node->next) {
-        node->next->prev = node;
-        node = node->next;
-    }
-    node->next = head;
-    head->prev = node;
+    q_sortK(head, descend, q_size(head));
 }
 
 /* Remove every node which has a node with a strictly less value anywhere to
@@ -346,46 +332,21 @@ int q_descend(struct list_head *head)
     return q_size(head);
 }
 
-/* Merge two queues given their queue contexts */
-static void q_merge2(struct list_head *a, struct list_head *b, bool descend)
-{
-    queue_contex_t *context_a = list_entry(a, queue_contex_t, chain);
-    queue_contex_t *context_b = list_entry(b, queue_contex_t, chain);
-    struct list_head *qa = context_a->q;
-    struct list_head *qb = context_b->q;
-
-    qa->prev->next = NULL;
-    qb->prev->next = NULL;
-    struct list_head *list = list_merge(qa->next, qb->next, descend);
-    qa->next = list;
-    list->prev = qa;
-    while (list->next) {
-        list->next->prev = list;
-        list = list->next;
-    }
-    list->next = qa;
-    qa->prev = list;
-    INIT_LIST_HEAD(qb);
-}
-
 /* Merge K queues given their queue contexts */
 static void q_mergeK(struct list_head *head, bool descend, int k)
 {
-    if (k == 1)
+    if (k <= 1)
         return;
-    if (k == 2) {
-        q_merge2(head, head->next, descend);
-        return;
-    }
 
     int half = k / 2;
     struct list_head *left = head, *right = head;
-    for (int i = 0; i < half; i++, right = right->next)
-        ;
+    for (int i = 0; i < half; i++)
+        right = right->next;
 
     q_mergeK(left, descend, half);
     q_mergeK(right, descend, k - half);
-    q_merge2(left, right, descend);
+    q_merge2(list_entry(left, queue_contex_t, chain)->q,
+             list_entry(right, queue_contex_t, chain)->q, descend);
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
