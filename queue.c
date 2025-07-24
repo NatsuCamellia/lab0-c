@@ -328,7 +328,7 @@ int q_descend(struct list_head *head)
     while (curr != head) {
         /* safe <- curr <- next */
         safe = curr->prev;
-        const element_t *curr_e = list_entry(curr, element_t, list);
+        element_t *curr_e = list_entry(curr, element_t, list);
         const element_t *next_e = list_entry(curr->next, element_t, list);
         if (strcmp(curr_e->value, next_e->value) < 0) {
             list_del_init(curr);
