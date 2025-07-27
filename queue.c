@@ -324,3 +324,34 @@ int q_merge(struct list_head *head, bool descend)
     q_mergeK(head->next, descend, len);
     return q_size(list_entry(head->next, queue_contex_t, chain)->q);
 }
+
+void q_shuffle(struct list_head *head)
+{
+    if (!head || list_empty(head))
+        return;
+
+    int len = q_size(head);
+    struct list_head **nodes = malloc(sizeof(struct list_head *) * len);
+    if (!nodes)
+        return;
+
+    struct list_head *node = head->next;
+    for (int i = 0; i < len; i++) {
+        nodes[i] = node;
+        node = node->next;
+    }
+    INIT_LIST_HEAD(head);
+
+    for (int j = len - 1; j > 0; j--) {
+        int i = rand() % (j + 1);
+        struct list_head *tmp = nodes[i];
+        nodes[i] = nodes[j];
+        nodes[j] = tmp;
+    }
+
+    for (int i = 0; i < len; i++) {
+        list_add_tail(nodes[i], head);
+    }
+
+    free(nodes);
+}
