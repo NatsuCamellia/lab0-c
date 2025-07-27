@@ -240,7 +240,28 @@ void q_sort(struct list_head *head, bool descend)
  * the right side of it */
 int q_ascend(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-nodes-from-linked-list/
+    if (!head || list_empty(head))
+        return q_size(head);
+
+    /* Iterate all nodes backwards. Let prev and next adjacent nodes.
+     * If prev < next then remove prev */
+    struct list_head *curr = head->prev->prev, *safe;
+    while (curr != head) {
+        /* safe <- curr <- next */
+        safe = curr->prev;
+        element_t *curr_e = list_entry(curr, element_t, list);
+        const element_t *next_e = list_entry(curr->next, element_t, list);
+        if (strcmp(curr_e->value, next_e->value) > 0) {
+            list_del_init(curr);
+            /* Delete is needed to pass the test */
+            free(curr_e->value);
+            free(curr_e);
+        }
+        curr = safe;
+    }
+
+    return q_size(head);
+
     return 0;
 }
 
