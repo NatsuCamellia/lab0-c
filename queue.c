@@ -143,26 +143,23 @@ bool q_delete_dup(struct list_head *head)
     if (!head || list_empty(head))
         return false;
 
-    element_t *curr = list_entry(head->next, element_t, list), *next;
-    while (&curr->list != head) {
-        bool duplicated = false;
-        next = list_entry(curr->list.next, element_t, list);
-        while (&next->list != head && strcmp(curr->value, next->value) == 0) {
-            duplicated = true;
-            list_del(&next->list);
-            free(next->value);
-            free(next);
-            next = list_entry(curr->list.next, element_t, list);
-        }
+    struct list_head *pending;
+    element_t *node, *cut;
+    list_for_each_entry(node, head, list) {
+        cut = list_entry(node->list.next, element_t, list);
+        while (&cut->list != head && !strcmp(node->value, cut->value))
+            cut = list_entry(cut->list.next, element_t, list);
+        cut = list_entry(cut->list.prev, element_t, list);
 
-        if (duplicated) {
-            list_del(&curr->list);
-            free(curr->value);
-            free(curr);
+        if (cut != node) {
+            /* Duplicated */
+            pending = q_new();
+            node = list_entry(node->list.prev, element_t, list);
+            list_cut_position(pending, &node->list, &cut->list);
+            q_free(pending);
         }
-
-        curr = next;
     }
+
     return true;
 }
 
