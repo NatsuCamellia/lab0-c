@@ -166,24 +166,7 @@ bool q_delete_dup(struct list_head *head)
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
-    if (!head)
-        return;
-
-    struct list_head *left, *right;
-    left = head->next;
-    right = left->next;
-    while (left != head && right != head) {
-        right->prev = left->prev;
-        left->prev = right;
-        left->next = right->next;
-        right->next = left;
-
-        left->next->prev = left;
-        right->prev->next = right;
-
-        left = left->next;
-        right = left->next;
-    }
+    return q_reverseK(head, 2);
 }
 
 /* Reverse elements in queue */
@@ -203,37 +186,23 @@ void q_reverse(struct list_head *head)
     head->prev = next;
 }
 
-/* Reverse a doubly linked list starting with head with length k.
- * Also modify the node outside of the reversed list */
-static void list_reverseK(struct list_head *head, int k)
-{
-    /* prev, head, next */
-    struct list_head *prev = head->prev, *next = head->next, *tail = head,
-                     *node;
-    while (k > 1) {
-        node = next;
-        next = next->next;
-        node->next = head;
-        head->prev = node;
-        head = node;
-        k--;
-    }
-    head->prev = prev;
-    prev->next = head;
-    tail->next = next;
-    next->prev = tail;
-}
-
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
     if (!head || list_empty(head))
         return;
 
-    int len = q_size(head);
-    struct list_head *node;
-    for (node = head->next; len >= k; node = node->next, len -= k) {
-        list_reverseK(node, k);
+    struct list_head pending;
+    INIT_LIST_HEAD(&pending);
+    struct list_head *node = head->next, *tail;
+    for (int len = q_size(head); len >= k; len -= k) {
+        tail = node->prev;
+        for (int i = 0; i < k; i++) {
+            node = node->next;
+        }
+        list_cut_position(&pending, tail, node->prev);
+        q_reverse(&pending);
+        list_splice_init(&pending, tail);
     }
 }
 
