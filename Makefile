@@ -35,6 +35,15 @@ ifeq ("$(SANITIZER)","1")
     LDFLAGS += -fsanitize=address
 endif
 
+# Enable Linux sort implementation
+ifeq ("$(LINUX)","1")
+    CFLAGS += -DLINUX_SORT
+endif
+
+ifeq ("$(CMPCNT)","1")
+    CFLAGS += -DCMPCNT
+endif
+
 $(GIT_HOOKS):
 	@scripts/install-git-hooks
 	@echo

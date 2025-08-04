@@ -2,19 +2,32 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef LINUX_SORT
 #include "list_sort.h"
+#endif
 #include "queue.h"
+
+static int cmpcnt = 0;
+static int cmp_element_t(void *priv,
+                         const struct list_head *a,
+                         const struct list_head *b)
+{
+#ifdef CMPCNT
+    cmpcnt++;
+#endif
+    bool descend = *(bool *) priv;
+    return strcmp(list_entry(a, element_t, list)->value,
+                  list_entry(b, element_t, list)->value) *
+           (descend ? -1 : 1);
+}
 
 /* Merge two queues */
 static void q_merge2(struct list_head *a, struct list_head *b, bool descend)
 {
     struct list_head head, *node;
     INIT_LIST_HEAD(&head);
-    int flip = descend ? -1 : 1;
     while (!list_empty(a) && !list_empty(b)) {
-        if (flip * strcmp(list_first_entry(a, element_t, list)->value,
-                          list_first_entry(b, element_t, list)->value) <=
-            0)
+        if (cmp_element_t(&descend, a->next, b->next) <= 0)
             node = &q_remove_head(a, NULL, 0)->list;
         else
             node = &q_remove_head(b, NULL, 0)->list;
@@ -207,15 +220,28 @@ void q_reverseK(struct list_head *head, int k)
     }
 }
 
-static int cmp_element_t(void *priv,
-                         const struct list_head *a,
-                         const struct list_head *b)
+#ifndef LINUX_SORT
+/* Sort a queue with length k */
+static void q_sortK(struct list_head *head, bool descend, int k)
 {
-    bool descend = *(bool *) priv;
-    return strcmp(list_entry(a, element_t, list)->value,
-                  list_entry(b, element_t, list)->value) *
-           (descend ? -1 : 1);
+    if (!head || k <= 1)
+        return;
+
+    struct list_head left;
+    INIT_LIST_HEAD(&left);
+
+    int half = k / 2;
+    struct list_head *cut = head;
+    for (int i = 0; i < half; i++)
+        cut = cut->next;
+    list_cut_position(&left, head, cut);
+
+    q_sortK(&left, descend, half);
+    q_sortK(head, descend, k - half);
+    q_merge2(&left, head, descend); /* For stable sort */
+    list_splice_init(&left, head);
 }
+#endif
 
 /* Sort elements of queue in ascending/descending order */
 void q_sort(struct list_head *head, bool descend)
@@ -223,8 +249,17 @@ void q_sort(struct list_head *head, bool descend)
     if (!head)
         return;
 
-    // q_sortK(head, descend, q_size(head));
+#ifdef LINUX_SORT
     list_sort(&descend, head, cmp_element_t);
+#else
+    q_sortK(head, descend, q_size(head));
+#endif
+
+#ifdef CMPCNT
+    printf("Compare count = %d\n", cmpcnt);
+    fflush(stdout);
+    cmpcnt = 0;
+#endif
 }
 
 /* Remove every node which has a node with a strictly less value anywhere to
