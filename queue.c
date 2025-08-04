@@ -7,7 +7,9 @@
 #endif
 #include "queue.h"
 
+#ifdef CMPCNT
 static int cmpcnt = 0;
+#endif
 static int cmp_element_t(void *priv,
                          const struct list_head *a,
                          const struct list_head *b)
