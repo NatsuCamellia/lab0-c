@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "list_sort.h"
 #include "queue.h"
 
 /* Merge two queues */
@@ -206,25 +207,14 @@ void q_reverseK(struct list_head *head, int k)
     }
 }
 
-/* Sort a queue with length k */
-static void q_sortK(struct list_head *head, bool descend, int k)
+static int cmp_element_t(void *priv,
+                         const struct list_head *a,
+                         const struct list_head *b)
 {
-    if (!head || k <= 1)
-        return;
-
-    struct list_head left;
-    INIT_LIST_HEAD(&left);
-
-    int half = k / 2;
-    struct list_head *cut = head;
-    for (int i = 0; i < half; i++)
-        cut = cut->next;
-    list_cut_position(&left, head, cut);
-
-    q_sortK(&left, descend, half);
-    q_sortK(head, descend, k - half);
-    q_merge2(&left, head, descend); /* For stable sort */
-    list_splice_init(&left, head);
+    bool descend = *(bool *) priv;
+    return strcmp(list_entry(a, element_t, list)->value,
+                  list_entry(b, element_t, list)->value) *
+           (descend ? -1 : 1);
 }
 
 /* Sort elements of queue in ascending/descending order */
@@ -233,7 +223,8 @@ void q_sort(struct list_head *head, bool descend)
     if (!head)
         return;
 
-    q_sortK(head, descend, q_size(head));
+    // q_sortK(head, descend, q_size(head));
+    list_sort(&descend, head, cmp_element_t);
 }
 
 /* Remove every node which has a node with a strictly less value anywhere to
